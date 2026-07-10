@@ -74,7 +74,8 @@ export const getUserByIdController = async (req, res, next) => {
 
 export const updateUserDateController = async (req, res, next) => {
   try{
-    const user = await updateUserDateService(req.body);
+    const dato = req.body;
+    const user = await updateUserDateService(dato);
     res.status(200).json({
       success: true,
       message: "Datos actualizados correctamente",

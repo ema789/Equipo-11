@@ -1,8 +1,35 @@
 import pool from "../database/connection.js";
 
+export const findPresupuestoConClienteRepository = async (presupuestoId, usuarioId) => {
+    const query = `
+        SELECT
+            p.id, 
+            p.estado,
+            p.cliente_id, 
+            c.nombre AS cliente_nombre,
+            c.apellido AS cliente_apellido,
+            c.email AS cliente_email
+        FROM presupuestos p
+        JOIN clientes c ON p.cliente_id = c.id
+        WHERE p.id = $1 
+          AND p.usuario_id = $2 
+          AND p.deleted_at IS NULL;
+    `;
+
+    const result = await pool.query(query, [presupuestoId, usuarioId]);
+
+    // Si no hay ninguna fila (el presupuesto no existe, no es de este usuario,
+    // o está borrado lógicamente), devolvemos null en vez de undefined.
+    return result.rows[0] || null;
+};
+
 /**
- * Obtiene un presupuesto completo con sus detalles y datos del cliente
+ * ==================================================
+ *  Obtiene un presupuesto completo con sus detalles  
+ *  y datos del cliente
+ * ==================================================
  */
+
 export const findPresupuestoConDetallesRepository = async (presupuestoId, usuarioId) => {
     const query = `
         SELECT
@@ -25,7 +52,7 @@ export const findPresupuestoConDetallesRepository = async (presupuestoId, usuari
                 ) ORDER BY dp.created_at
             ) AS detalles
 
-        FROM presupuesto p
+        FROM presupuestos p
 
         -- INNER JOIN: si el cliente no existiera no debería pasar nunca
         -- (cliente_id es NOT NULL y tiene FK), así que este sí puede quedar INNER.
@@ -57,85 +84,228 @@ export const findPresupuestoConDetallesRepository = async (presupuestoId, usuari
 };
 
 /**
- * Crea presupuesto y sus detalles mediante una Transacción ACID
- */
+ * ==================================================
+ * REPOSITORY: Crear presupuesto 
+ * ==================================================
+ **/
 export const createPresupuestoTransaccionRepository = async ({
-    usuarioId,
-    clienteId,
-    fechaVencimiento,
-    subtotal,
-    total,
+    usuarioId, 
+    clienteId,  
+    fechaVencimiento, 
+    descripcion,
     estado,
-    pdfUrl,
-    pdfPublicId,
-    detalles // Array de objetos: { item_id, cantidad, precio_unitario, subtotal }
+    subtotal, 
+    descuentoPorcentaje,
+    total,
+    detallesProcesados,
 }) => {
-    // Pedimos una conexión DEDICADA del pool (no una cualquiera).
-    // Es obligatorio para transacciones: todas las queries de la transacción
-    // tienen que correr sobre la MISMA conexión, si no Postgres no las asocia entre sí.
     const client = await pool.connect();
-
     try {
-        // Arranca la transacción. A partir de acá, nada de lo que insertemos
-        // queda escrito "en serio" en la base hasta que llegue el COMMIT.
         await client.query("BEGIN");
 
-        // 1. Insertar Cabecera del presupuesto
-        // OJO: la tabla se llama 'presupuesto' (singular), no 'presupuestos'.
-        const queryPresupuesto = `
-            INSERT INTO presupuesto (usuario_id, cliente_id, fecha_vencimiento, subtotal, total, estado, pdf_url, pdf_public_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING id;
-        `;
-        // client.query devuelve un objeto con la propiedad 'rows' (array de filas).
-        // Como insertamos 1 sola fila, desestructuramos directo la primera posición.
-        // RETURNING id nos da el UUID generado por gen_random_uuid(), que necesitamos
-        // para poder engancharle las líneas del detalle en el paso siguiente.
-        const { rows: [presupuesto] } = await client.query(queryPresupuesto, [
-            usuarioId, clienteId, fechaVencimiento, subtotal, total, estado, pdfUrl, pdfPublicId
-        ]);
+        // 1. Insertar cabecera del presupuesto
+        const { rows: [nuevoPresupuesto] } = await client.query(
+            `INSERT INTO presupuestos
+                (usuario_id, 
+                cliente_id, 
+                fecha_vencimiento, 
+                descripcion,
+                estado,  
+                subtotal,
+                descuento_porcentaje,  
+                total, 
+                )
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             RETURNING id, created_at, subtotal, total, estado;`
+        );
 
-        // 2. Insertar todas las líneas de detalle en UNA sola query (insert en lote)
-        // en vez de un INSERT por cada ítem dentro de un for. Menos viajes a la base
-        // cuando el presupuesto tiene varios ítems.
-        if (detalles.length > 0) {
-            // Vamos a armar algo como:
-            // INSERT INTO detalle_presupuesto (presupuesto_id, items_id, cantidad, precio_unitario, subtotal)
-            // VALUES ($1,$2,$3,$4,$5), ($6,$7,$8,$9,$10), ...
-            const values = []; // acá van TODOS los valores, en orden, para los placeholders $1, $2, $3...
-            const placeholders = detalles.map((det, i) => {
-                // Cada línea usa 5 columnas, así que el bloque de placeholders
-                // de la línea i arranca en (i*5 + 1) y ocupa 5 números seguidos.
-                const base = i * 5;
-                values.push(presupuesto.id, det.item_id, det.cantidad, det.precio_unitario, det.subtotal);
-                return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`;
-            }).join(", "); // separamos cada grupo "(...)" con una coma
+        const { rows: [nuevoPresupuesto] } = await client.query(query, 
+            [usuarioId, clienteId, fechaVencimiento, descripcion, estado, subtotal, descuentoPorcentaje, total]
+        );
 
-            // OJO: la columna se llama 'items_id' (así quedó definida en la migración
-            // 006_create_detallePresupuesto.sql), no 'item_id'.
-            const queryDetalle = `
-                INSERT INTO detalle_presupuesto (presupuesto_id, items_id, cantidad, precio_unitario, subtotal)
-                VALUES ${placeholders};
-            `;
-
-            await client.query(queryDetalle, values);
+        // 2. Insertar cada ítem del detalle
+        for (const det of detallesProcesados) {
+            await client.query(
+                `INSERT INTO detalle_presupuesto
+                    (   presupuesto_id, 
+                        item_id, 
+                        cantidad, 
+                        precio_unitario, 
+                        subtotal
+                    )
+                 VALUES ($1, $2, $3, $4, $5);`,
+                [
+                    nuevoPresupuesto.id, 
+                    det.item_id, 
+                    det.cantidad, 
+                    det.precio_unitario, 
+                    det.subtotal
+                ]
+            );
         }
 
-        // Si llegamos hasta acá sin errores, confirmamos todo lo insertado
-        // (la cabecera + todas las líneas) de una vez.
         await client.query("COMMIT");
-        return { id: presupuesto.id, success: true };
+        return { ...nuevoPresupuesto, detalles: detallesProcesados };
 
     } catch (error) {
-        // Si CUALQUIER paso de arriba falla (cabecera o cualquier línea de detalle),
-        // deshacemos todo lo que se haya insertado en esta transacción.
-        // Así evitamos presupuestos "fantasma": una cabecera guardada sin sus ítems,
-        // o con solo algunos ítems porque el resto falló.
         await client.query("ROLLBACK");
-        throw error; // se lo pasamos al controller/service que llamó a esta función
+        // Re-lanzar el error original para que el servicio lo maneje con AppError
+        throw error;
     } finally {
-        // Devolvemos la conexión al pool SIEMPRE, haya salido bien o mal.
-        // Si no hacemos esto, con el tiempo se agotan las conexiones disponibles.
+        // SIEMPRE liberar la conexión al pool
         client.release();
     }
+};
+
+/**
+ * ===================================================
+ * REPOSITORY: GUARDAR PRESUPUESTO PDF
+ * ===================================================
+ */
+
+export const addPdfRepository = async (dato) => {
+
+    const {
+        usuarioId,
+        presupuestoId,
+        pdf_url,
+        pdf_public_id,
+        estado
+    } = dato;
+
+    // Usamos UPDATE porque el presupuesto ya existe
+    const query = `
+        UPDATE presupuestos
+        SET pdf_url = $1, 
+            pdf_public_id = $2,
+            estado = $3,
+            updated_at = NOW()
+        WHERE id = $4 
+          AND usuario_id = $5
+          AND deleted_at IS NULL
+        RETURNING id, pdf_url, estado;
+    `;
+
+    const result = await pool.query(query, [
+        pdf_url, 
+        pdf_public_id, 
+        estado,
+        presupuestoId, 
+        usuarioId
+    ]);
+
+
+    // Si result.rows.length es 0, significa que no se encontró el presupuesto 
+    // o el usuario no tiene permisos sobre él.
+    if (result.rows.length === 0) {
+        throw new AppError("No se pudo actualizar el PDF: presupuesto no encontrado o no autorizado", 404);
+    }
+
+    return result.rows[0];
+}
+
+
+/**
+ * =================================================
+ * REPOSITORY: FILTROS POR FECHA, ESTADO Y CLIENTE 
+ * =================================================
+ */
+
+export const findPresupuestosConFiltrosRepository = async (
+    usuarioId, 
+    filtros,
+    limite,
+    skip
+) => {
+    // 1. Array para guardar las condiciones (WHERE)
+    const conditions = ['usuario_id = $1', 'deleted_at IS NULL'];
+    const values = [usuarioId];
+
+    // Función auxiliar para agregar condiciones de forma limpia
+    const addFilter = (cond, val) => {
+        conditions.push(`${cond} $${values.length + 1}`);
+        values.push(val);
+    };
+
+    // 2. Filtro dinámico: Si el cliente envía 'estado', lo sumamos a la query
+    if (filtros.estado) {
+        conditions.push(`estado = $${values.length + 1}`);
+        values.push(filtros.estado);
+    }
+
+    if (filtros.busqueda) {
+        conditions.push(`(c.nombre ILIKE $${values.length + 1} OR c.apellido ILIKE $${values.length + 1})`);
+        values.push(`%${filtros.busqueda}%`);
+    }
+
+    if (filtros.fechaInicio) {
+        conditions.push(`created_at >= $${values.length + 1}`);
+        values.push(filtros.fechaInicio);
+    }
+
+    if (filtros.montoMinimo) {
+        conditions.push(`p.total >= $${values.length + 1}`);
+        values.push(filtros.montoMinimo);
+    }
+
+    if (filtros.montoMaximo) {
+        conditions.push(`p.total <= $${values.length + 1}`);
+        values.push(filtros.montoMaximo);
+    }
+
+    // 3. Construcción final
+    const query = `
+        SELECT p.*, c.nombre, c.apellido 
+        FROM presupuestos p
+        JOIN clientes c ON p.cliente_id = c.id
+        WHERE ${conditions.join(' AND ')}
+        ORDER BY created_at DESC
+        LIMIT $${values.length + 1} OFFSET $${values.length + 2};;
+    `;
+
+    values.push(limite, skip);
+
+    const result = await pool.query(query, values);
+    return result.rows;
+};
+
+
+export const contarPresupuestosConFiltrosRepository = async (
+    usuarioId,
+    filtros
+) => {
+    const conditions = ['p.usuario_id = $1', 'p.deleted_at IS NULL'];
+    const values = [usuarioId];
+
+    if (filtros.estado) {
+        conditions.push(`p.estado = $${values.length + 1}`);
+        values.push(filtros.estado);
+    }
+    if (filtros.busqueda) {
+        conditions.push(`(c.nombre ILIKE $${values.length + 1} OR c.apellido ILIKE $${values.length + 1})`);
+        values.push(`%${filtros.busqueda}%`);
+    }
+    if (filtros.fechaInicio) {
+        conditions.push(`p.created_at >= $${values.length + 1}`);
+        values.push(filtros.fechaInicio);
+    }
+    if (filtros.montoMinimo) {
+        conditions.push(`p.total >= $${values.length + 1}`);
+        values.push(filtros.montoMinimo);
+    }
+    if (filtros.montoMaximo) {
+        conditions.push(`p.total <= $${values.length + 1}`);
+        values.push(filtros.montoMaximo);
+    }
+
+    const query = `
+        SELECT COUNT(*) 
+        FROM presupuestos p
+        JOIN clientes c ON p.cliente_id = c.id
+        WHERE ${conditions.join(' AND ')};
+    `;
+
+    const result = await pool.query(query, values);
+    // Retornamos el número convertido a entero
+    return parseInt(result.rows[0].count, 10);
 };

@@ -1,8 +1,11 @@
 import {
     createClienteRepository, 
-    findClientesByUsuarioRepository 
+    findClientesByClienteRepository,
+    updateClienteRepository,
+    existsClienteRepository
 } from "../repositories/cliente.repository.js";
-import { clienteValidator } from "../validators/cliente.validator.js";
+
+import { AppError } from "../utils/AppError.util.js";
 /**
  * 
  * @param {
@@ -10,18 +13,41 @@ import { clienteValidator } from "../validators/cliente.validator.js";
  *   nombre, 
  *   apellido, 
  *   email, 
- *   cuil_cuit, 
+ *   cuil_cuit,
  *   telefono 
  * } clienteData 
+ * 
  * @returns 
  */
-export const registerClienteService = async (clienteData) => {
+export const createClienteService = async (usuarioId, clienteData) => {
     
-    clienteValidator(clienteData);
+    const dataToSave = { 
+        ...clienteData, 
+        usuario_id:usuarioId
+    };
 
-    return await createClienteRepository(clienteData);
+    return await createClienteRepository(dataToSave);
+
 };
 
 export const getClientesByUsuarioService = async (usuarioId) => {
-    return await findClientesByUsuarioRepository(usuarioId);
+    return await findClientesByClienteRepository(usuarioId);
 };
+
+export const updateClienteService = async (usuario_id, updateData) => {
+    
+     const exists = await existsClienteRepository(usuario_id, updateData.id);
+    if(!exists) { throw new AppError("Cliente no encontrado", 404); }
+
+    const dataToUpdate = { 
+        ...updateData,
+        usuario_id
+    };
+
+    const cliente = await updateClienteRepository(usuario_id, dataToUpdate);
+    
+    return cliente;
+
+
+}
+

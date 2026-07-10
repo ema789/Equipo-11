@@ -1,16 +1,24 @@
-import { registerClienteService, getClientesByUsuarioService } from "../services/cliente.service.js";
+import { 
+    createClienteService, 
+    getClientesByUsuarioService ,
+    updateClienteService
+} from "../services/cliente.service.js";
 
-export const createCliente = async (req, res, next) => {
+export const createClienteController = async (req, res, next) => {
     try {
         const usuarioId = req.auth.id; 
-        const nuevoCliente = await registerClienteService({ ...req.body, usuarioId });
-        res.status(201).json({ success: true, cliente: nuevoCliente });
+        const nuevoCliente = await createClienteService(usuarioId, { ...req.body });
+        res.status(201).json({ 
+            success: true, 
+            message: "Cliente creado correctamente",
+            cliente: nuevoCliente 
+        });
     } catch (error) {
         next(error);
     }
 };
 
-export const getClientes = async (req, res, next) => {
+export const getClientesController = async (req, res, next) => {
     try {
         const usuarioId = req.auth.id;
         const clientes = await getClientesByUsuarioService(usuarioId);
@@ -19,3 +27,23 @@ export const getClientes = async (req, res, next) => {
         next(error);
     }
 };
+
+export const updateClienteController = async (req, res, next) => {
+
+    try {
+        const usuarioId = req.auth.id;
+        const clienteId = req.params.id;
+        const updateData = { 
+            ...req.body, 
+            id: clienteId 
+        };
+
+        const updatedCliente = await updateClienteService(usuarioId, updateData);
+        res.status(200).json({ 
+            success: true, 
+            message: "Cliente actualizado correctamente",
+            cliente: updatedCliente });
+    }catch (error) {
+        next(error);
+    }
+}

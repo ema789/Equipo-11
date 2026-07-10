@@ -3,7 +3,7 @@ import cors from "cors";
 import morgan from "morgan";
 import dotenv from "dotenv";
 
-import authRoutes from "./routes/auth.routes.js";
+import routes from "./routes/index.routes.js";
 
 import { errorHandler } from "./middlewares/error.middleware.js";
 
@@ -38,7 +38,7 @@ message: "API funcionando correctamente",
 Rutas
 ========================= */
 
-app.use("/api/auth", authRoutes);
+routes(app);
 
 /* ==============================
 HEALTH CHECK

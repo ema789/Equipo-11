@@ -1,6 +1,10 @@
-import { registerItemService, getItemsByUsuarioService } from "../services/item.service.js";
+import { 
+    registerItemService, 
+    getItemsByUsuarioService,
+    updateItemService
+} from "../services/item.service.js";
 
-export const createItem = async (req, res, next) => {
+export const createItemController = async (req, res, next) => {
     try {
         const usuarioId = req.auth.id; 
         const nuevoItem = await registerItemService({ ...req.body, usuarioId });
@@ -10,12 +14,32 @@ export const createItem = async (req, res, next) => {
     }
 };
 
-export const getItems = async (req, res, next) => {
+export const getItemsController = async (req, res, next) => {
     try {
         const usuarioId = req.auth.id; 
         const items = await getItemsByUsuarioService(usuarioId);
         res.json({ success: true, items });
     } catch (error) {
+        next(error);
+    }
+};
+
+export const updateItemController = async (req, res, next) => {
+    try {
+
+        const usuarioId = req.auth.id;
+        const itemId = req.params.id;
+        const updateData = req.body;
+        
+        const updatedItem = await updateItemService(usuarioId, itemId, updateData);
+        
+        res.status(200).json({
+            success: true, 
+            message: "Item actualizado correctamente",
+            item: updatedItem 
+        });
+
+    }catch (error){
         next(error);
     }
 };

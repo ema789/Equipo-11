@@ -17,11 +17,11 @@ CREATE TABLE clientes (
     -- Apellido
     apellido VARCHAR(100),
 
+    -- Cuil o Cuit del Usuario
+    cuil_cuit VARCHAR(100),
+
     -- Email del cliente
     email VARCHAR(255),
-
-    -- CUIT/CUIL
-    cuil_cuit VARCHAR(20),
 
     -- Teléfono
     telefono VARCHAR(50),

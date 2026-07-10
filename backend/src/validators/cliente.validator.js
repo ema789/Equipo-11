@@ -1,25 +1,28 @@
-import { AppError } from "../utils/AppError.js";
-export const clienteValidator = (clienteData) => {
-    const { nombre, apellido, email, cuit, telefono } = clienteData;
-    
-    if ( nombre === undefined || nombre === null || nombre.trim() === "") {
-            throw new AppError("El nombre del cliente es un campo obligatorio", 400);
-    }
-
-    if(apellido === undefined || apellido === null || apellido.trim() === "") {
-        throw new AppError("El apellido del cliente es un campo obligatorio", 400);
-    }
-
-    if(email === undefined || email === null || email.trim() === "") {
-        throw new AppError("El email del cliente es un campo obligatorio", 400);
-    }   
-
-    if(cuit === undefined || cuit === null || cuit.trim() === "") {
-        throw new AppError("El cuit del cliente es un campo obligatorio", 400);
-    }   
-
-    if(telefono === undefined || telefono === null || telefono.trim() === "") {
-        throw new AppError("El telefono del cliente es un campo obligatorio", 400);
-    }
-    
-}
+import { body } from "express-validator"; 
+// Reglas de validación para crear cliente
+export const createClienteValidation = [
+    body("nombre")
+        .trim()
+        .notEmpty().withMessage("El nombre del cliente es obligatorio")
+        .isLength({ max: 100 }).withMessage("El nombre no puede superar 100 caracteres")
+        .escape(),
+    body("apellido")
+        .optional()
+        .trim()
+        .isLength({ max: 100 }).withMessage("El apellido no puede superar 100 caracteres")
+        .escape(),
+    body("email")
+        .optional()
+        .isEmail().withMessage("Debe ser un email válido")
+        .normalizeEmail(),
+    body("cuit_cuil")
+        .optional()
+        .trim()
+        .isLength({ max: 20 }).withMessage("El CUIT no puede superar 20 caracteres")
+        .escape(),
+    body("telefono")
+        .optional()
+        .trim()
+        .isLength({ max: 50 }).withMessage("El teléfono no puede superar 50 caracteres")
+        .escape(),
+];

@@ -3,6 +3,10 @@ import { AppError } from "../utils/AppError.util.js";
 import {
     createPresupuestoTransaccionRepository,
     findPresupuestoConDetallesRepository,
+    addPdfRepository,
+    findPresupuestoConClienteRepository,
+    findPresupuestosConFiltrosRepository,
+    contarPresupuestosConFiltrosRepository,
 } from "../repositories/presupuesto.repository.js";
 
 /**
@@ -15,17 +19,15 @@ const ESTADOS_VALIDOS = ["Borrador", "Guardado", "Enviado", "Aceptado", "Rechaza
  * SERVICE: Crear presupuesto completo
  * ==================================================
  **/
-export const createPresupuestoCompletoService = async (
-    { 
-        usuarioId, 
-        clienteId, 
-        fechaVencimiento, 
-        estado, 
-        detalles 
-    },
-    file,
-    nombreEmprendimiento
-) => {
+export const createPresupuestoCompletoService = async ({
+    usuarioId,
+    clienteId,
+    fechaVencimiento,
+    descripcion,
+    estado,
+    detalles,
+    descuentoPorcentaje = 0
+}) => {
     // 1. Validaciones de negocio
     // Un presupuesto sin ítems no tiene sentido: cortamos acá antes de tocar
     // Cloudinary o la base de datos.
@@ -56,35 +58,26 @@ export const createPresupuestoCompletoService = async (
         // así el repositorio no tiene que recalcular nada, solo insertar.
         return { ...det, subtotal: itemSubtotal };
     });
-    // Por ahora total = subtotal (sin descuento ni IVA aplicados todavía en este flujo).
-    const totalCalculado = subtotalCalculado;
 
-    // 3. Subida del PDF a Cloudinary (si se adjuntó uno)
-    let pdfUrl = null;
-    let pdfPublicId = null;
+    // 3. Cálculo de Descuento (maneja 0 o cualquier porcentaje)
+    // Si descuentoPorcentaje es 0, el resultado será 0, lo cual es correcto.
+    const descPorcentaje = Number(descuentoPorcentaje) || 0;
+    const descMonto = subtotalCalculado * (descPorcentaje / 100);
 
-    if (file) {
-        const creacionFecha = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-        const uploadResult = await uploadPresupuestoService(file.buffer, nombreEmprendimiento, creacionFecha);
-        pdfUrl = uploadResult.url;
-        pdfPublicId = uploadResult.public_id;
-    }
+    //4. Total Final
+    const total = subtotalCalculado - descMonto;
 
-    // 4. Delegar la transacción ACID al repositorio
-    // IMPORTANTE: las claves de este objeto tienen que llamarse EXACTAMENTE igual
-    // que los nombres que el repositorio destructura (subtotal, total, detalles),
-    // no como se llaman las variables acá adentro (subtotalCalculado, etc.).
-    // Antes esto estaba desalineado y el repositorio recibía 'undefined'.
+    // 5. Delegar la transacción ACID al repositorio
     return await createPresupuestoTransaccionRepository({
         usuarioId,
         clienteId,
         fechaVencimiento,
-        subtotal: subtotalCalculado,   
-        total: totalCalculado,         
+        descripcion,
         estado: estadoFinal,
-        pdfUrl,
-        pdfPublicId,
-        detalles: detallesProcesados,  
+        subtotal: subtotalCalculado,
+        descuentoPorcentaje: descPorcentaje,
+        total,
+        detalles: detallesProcesados
     });
 };
 
@@ -100,3 +93,81 @@ export const getPresupuestoByIdService = async (presupuestoId, usuarioId) => {
     // (ej: chequear permisos, formatear la respuesta) sin tocar el controller.
     return await findPresupuestoConDetallesRepository(presupuestoId, usuarioId);
 };
+
+/**
+ * GUARDAR PDF 
+ */
+export const addPdfService = async (
+    {
+        usuarioId,
+        presupuestoId,
+    },
+    file,
+) => {
+
+    const cliente = await findPresupuestoConClienteRepository(presupuestoId, usuarioId);
+
+    if(!cliente) throw new AppError("El cliente no existe");
+
+    if (!file) throw new AppError("No se encuentra el archivo");
+
+    //  Subida del PDF a Cloudinary (si se adjuntó uno)
+
+    /** DIVIDIMOS LA CARPETA POR FECHA DE CREACION & NOMBRE DEL CLIENTE*/
+    const nombreDelCliente = `${cliente.cliente_nombre}_${cliente.cliente_apellido}`;
+    const creacionFecha = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const uploadResult = await uploadPresupuestoService(file.buffer, nombreDelCliente, creacionFecha);
+
+    return await addPdfRepository({
+        usuarioId,
+        clienteId,
+        presupuestoId,
+        pdf_url: uploadResult.url,
+        pdf_public_id: uploadResult.public_id,
+        estado: 'Guardado'
+    })
+}
+
+/**
+ * ==================================================
+ * SERVICE: FILTRADO POR FECHA ESTADO MONTO Y CLIENTE
+ * ==================================================
+ **/
+
+export const filtroPresupuestoService = async (
+    usuarioId,
+    pagina = 1,
+    limite = 10,
+    filtro = {},
+) => {
+
+    // 1. Calcular el desplazamiento (Offset)
+    const skip = (pagina - 1) * limite;
+
+    // 2. Llamar al repositorio
+    // NOTA: Asegúrate de que tu repositorio acepte 'limit' y 'offset' 
+    // para que la paginación ocurra en la base de datos (más eficiente)
+
+    const presupuesto = await findPresupuestosConFiltrosRepository(
+        usuarioId,
+        filtros,
+        limite,
+        skip
+    );
+
+    // 3. (Opcional pero recomendado) Obtener total para el frontend
+    // Esto es útil para calcular cuántas páginas existen en total
+
+    const total = await contarPresupuestosConFiltrosRepository(usuarioId, filtros);
+
+    return {
+        data: presupuestos,
+        meta: {
+            total,
+            pagina,
+            limite,
+            totalPaginas: Math.ceil(total / limite)
+        }
+    };
+
+}

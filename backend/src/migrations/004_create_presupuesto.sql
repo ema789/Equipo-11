@@ -3,7 +3,7 @@
 -- Guarda los presupuestos creados por cada usuario para sus clientes
 -- ==================================================
 
-CREATE TABLE presupuesto(
+CREATE TABLE presupuestos(
     -- Clave Primaria: Genera un UUID único automáticamente usando la función nativa de Postgres
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
@@ -13,18 +13,14 @@ CREATE TABLE presupuesto(
     -- Cliente al que se le emite el presupuesto (Clave Foránea hacia la tabla cliente)
     cliente_id UUID NOT NULL, 
 
+    -- Descripción opcional del ítem
+    descripcion VARCHAR(255),
+
     -- Subtotal: Suma de los ítems antes de impuestos o descuentos (10 dígitos en total, 2 decimales)
     subtotal NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
 
     -- Descuento: Porcentaje aplicado (ej: 10.00 para 10%)
     descuento_porcentaje NUMERIC(5, 2) DEFAULT 0.00,
-
-    -- Descuento: Monto monetario restado (ej: 50.50)
-    descuento_monto NUMERIC(10, 2) DEFAULT 0.00,
-
-    -- AQUÍ LA FLEXIBILIDAD PARA EL IVA
-    iva_porcentaje NUMERIC(5, 2) DEFAULT 21.00, -- El porcentaje usado
-    iva_monto NUMERIC(10, 2) DEFAULT 0.00,    -- El valor calculado
 
     -- Total: Monto final neto a pagar en el presupuesto
     total NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
@@ -39,8 +35,6 @@ CREATE TABLE presupuesto(
 
     -- Identificador único de Cloudinary para poder borrar o reemplazar el PDF en el futuro
     pdf_public_id TEXT,
-
-    medio_pago_id UUID REFERENCES medios_pago(id),
 
     -- Fecha límite de validez del presupuesto
     fecha_vencimiento TIMESTAMP,

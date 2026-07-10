@@ -3,7 +3,7 @@
 -- Guarda los items de cada usuario
 -- ==================================================
 
-CREATE TABLE item(
+CREATE TABLE items (
     -- Clave Primaria: Genera un UUID único automáticamente usando la función nativa de Postgres
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
@@ -12,9 +12,6 @@ CREATE TABLE item(
 
     -- Nombre del ítem (Obligatorio, máximo 100 caracteres)
     nombre VARCHAR(100) NOT NULL,
-
-    -- Descripción opcional del ítem
-    descripcion VARCHAR(255),
 
     -- En lugar de cantidad NUMERIC(10, 2)
     cantidad INTEGER NOT NULL DEFAULT 0,
