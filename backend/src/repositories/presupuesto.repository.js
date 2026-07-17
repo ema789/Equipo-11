@@ -106,21 +106,9 @@ export const createPresupuestoTransaccionRepository = async ({
         // 1. Insertar cabecera del presupuesto
         const { rows: [nuevoPresupuesto] } = await client.query(
             `INSERT INTO presupuestos
-                (usuario_id, 
-                cliente_id, 
-                fecha_vencimiento, 
-                descripcion,
-                estado,  
-                subtotal,
-                descuento_porcentaje,  
-                total, 
-                )
+                (usuario_id, cliente_id, fecha_vencimiento, descripcion, estado, subtotal, descuento_porcentaje, total)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-             RETURNING id, created_at, subtotal, total, estado;`
-             [usuarioId, clienteId, fechaVencimiento, descripcion, estado, subtotal, descuentoPorcentaje, total]
-        );
-
-        const { rows: [nuevoPresupuesto] } = await client.query(query, 
+             RETURNING id, created_at, subtotal, total, estado;`,
             [usuarioId, clienteId, fechaVencimiento, descripcion, estado, subtotal, descuentoPorcentaje, total]
         );
 

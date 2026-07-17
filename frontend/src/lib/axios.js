@@ -9,6 +9,19 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: `${process.env.NEXT_PUBLIC_API_URL}/api`,
   withCredentials: true, // Envía cookies HttpOnly automáticamente
+  //  COMUNICACIÓN ENTRE PUERTOS EN DESARROLLO
+  headers: {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json'
+  }
+});
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 /**

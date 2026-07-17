@@ -1,21 +1,11 @@
 import { NextResponse } from "next/server";
+import { PROTECTED_ROUTES, AUTH_ROUTES } from "@/lib/routes";
 
 /**
  * ==================================================
  * Next.js Middleware — Protección de rutas
  * ==================================================
  **/
-
-// Rutas que requieren autenticación
-const PROTECTED_ROUTES = [
-    "/dashboard",
-    "/clientes",
-    "/items",
-    "/presupuestos",
-];
-
-// Rutas de autenticación (redirigir si ya está logueado)
-const AUTH_ROUTES = ["/login", "/register"];
 
 export function middleware(request) {
     const { pathname } = request.nextUrl;
@@ -42,7 +32,8 @@ export function middleware(request) {
 
     // Caso 2: Usuario YA autenticado intenta ir al login/register
     if (isAuthRoute && token) {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
+        //de dashboard pasamos al  perfil momentaneamente para verificar si funciona. 
+        return NextResponse.redirect(new URL("/perfil", request.url));
     }
 
     return NextResponse.next();

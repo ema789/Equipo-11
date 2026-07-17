@@ -75,3 +75,20 @@ export const uploadPresupuestoService = async (
         url: result.secure_url
     };
 }
+
+/**
+ * ==========================================================
+ * ELIMINAR ARCHIVO DE CLOUDINARY
+ * ==========================================================
+ */
+export const deleteFileService = async (publicId, resourceType = "image") => {
+    try {
+        const result = await cloudinary.uploader.destroy(publicId, {
+            resource_type: resourceType,
+        });
+        return result;
+    } catch (error) {
+        console.error("Error al eliminar archivo en Cloudinary:", error);
+        throw error;
+    }
+};

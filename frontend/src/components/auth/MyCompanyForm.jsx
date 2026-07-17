@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { AvatarEmpresa } from "@/components/ui/AvatarEmpresa";
 import { BackButton } from "../ui/BackButton";
-import { getMeService, updateUserDataService } from "@/services/authService";
+import { getMeService, updateUserCompanyService } from "@/services/authService";
 
-export const MyDateForm = () => {
+export const MyCompanyForm = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
@@ -26,8 +26,8 @@ export const MyDateForm = () => {
     getMeService()
       .then((res) => {
         setUser(res.user);
-        const { nombre, apellido, email, telefono, cargo } = res.user;
-        reset({ nombre, apellido, email, telefono, cargo });
+        const { razon_social, cuil_cuit, direccion, telefono, rubro, sitio_web } = res.user;
+        reset({ razon_social, cuil_cuit, direccion, telefono, rubro, sitio_web});
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -39,8 +39,8 @@ export const MyDateForm = () => {
         ...data,
         userId: user.id 
       };
-      await updateUserDataService(dataToSend);
-      router.push("/perfil/datos");
+      await updateUserCompanyService(dataToSend);
+      router.push("/perfil/empresa");
     } catch (error) {
       setError("root", {
         type: "manual",
@@ -51,7 +51,7 @@ export const MyDateForm = () => {
     }
   };
 
-  if (loading) return <div>Cargando tus datos...</div>;
+  if (loading) return <div>Cargando...</div>;
 
   return (
     <>
@@ -59,7 +59,7 @@ export const MyDateForm = () => {
       <div className="flex items-center mb-6">
         <BackButton />
         <h1 className="flex-1 text-center text-2xl font-bold text-black mr-8">
-          Mis datos
+          Mi Empresa
         </h1>
       </div>
 
@@ -75,35 +75,48 @@ export const MyDateForm = () => {
       {/* Formulario */}
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         <Input
-          label="Nombre"
-          error={errors.nombre?.message}
-          {...register("nombre", { required: "El nombre es obligatorio" })}
+          label="Razon Social"
+          placeholder="Servicios Arg"
+          error={errors.razon_social?.message}
+          {...register("razon_social")}
         />
 
         <Input
-          label="Apellido"
-          error={errors.apellido?.message}
-          {...register("apellido")}
+          label="CUIL / CUIT"
+          placeholder="30-71234567-8"
+          error={errors.cuil_cuit?.message}
+          {...register("cuil_cuit")}
         />
 
         <Input
-          label="Email"
-          type="email"
-          error={errors.email?.message}
-          {...register("email", { required: "El email es obligatorio" })}
+          label="Dirección"
+          type="direccion"
+          placeholder="Calle Falsa 1234, CABA, Buenos Aires"
+          error={errors.direccion?.message}
+          {...register("direccion")}
         />
 
         <Input
           label="Teléfono"
+          placeholder="+54 9 11 50214093"
           error={errors.telefono?.message}
           {...register("telefono")}
         />
 
         <Input
-          label="Cargo"
-          error={errors.cargo?.message}
-          {...register("cargo")}
+          label="Rubro"
+          placeholder="Servicios"
+          error={errors.rubro?.message}
+          {...register("rubro")}
         />
+
+        <Input
+          label="Sitio Web"
+          placeholder="www.serviciosarg.com.ar"
+          error={errors.sitio_web?.message}
+          {...register("sitio_web")}
+        />
+
 
         {errors.root && (
           <p className="text-center text-sm text-red-500">

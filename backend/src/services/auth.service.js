@@ -15,6 +15,7 @@ import {
 // Importamos el servicio encargado de subir los archivos (logos) a la nube o servidor
 import {
     uploadLogoService,
+    deleteFileService,
 } from "./files.service.js";
 
 import { 
@@ -145,13 +146,15 @@ export const getUserByIdService = async (userId) => {
         apellido: user.apellido,
         email: user.email,
         nombreEmprendimiento: user.nombre_emprendimiento,
+        telefono: user.telefono,
+        cargo: user.cargo,
         logo_url: user.logo_url,
         logo_public_id: user.logo_public_id,
         razon_social: user.razon_social,
         cuil_cuit: user.cuil_cuit,
         direccion: user.direccion,
         rubro: user.rubro,
-        sitio_web: user.siti_web,
+        sitio_web: user.sitio_web,
         created_at: user.created_at,
         updated_at: user.updated_at
     };

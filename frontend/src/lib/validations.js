@@ -66,3 +66,38 @@ export const registerSchema = z
     path: ["repetirPassword"],
   }
 );
+
+export const registerCompanySchema = z.object({
+  razon_social: z
+    .string()
+    .min(1, "La razón social es obligatoria"),
+
+  cuil_cuit: z
+    .string()
+    .min(1, "El CUIL/CUIT es obligatorio"),
+
+  direccion: z
+    .string()
+    .min(1, "La dirección es obligatoria"),
+
+  telefono: z
+    .string()
+    .min(8, "Debe ingresar un teléfono válido"), 
+
+  rubro: z
+    .string()
+    .min(1, "El rubro es obligatorio"), 
+
+  sitio_web: z
+    .string()
+    .url("Debe ingresar una URL válida") 
+    .optional()
+    .or(z.literal("")), 
+
+  terminos: z
+    .boolean()
+    .refine(
+      (value) => value === true,
+      "Debe aceptar los términos y condiciones"
+    ),
+});

@@ -8,32 +8,21 @@ export const authMiddleware = async (req, res, next) => {
     // Middleware que valida el token antes de continuar.
     try {
         /* =========================================
-            HEADER AUTHORIZATION
+            OBTENER TOKEN: cookie httpOnly (web) o
+            header Authorization (apps sin cookies)
         ========================================= */
 
-        // Obtiene el header Authorization del request
+        const tokenFromCookie = req.cookies?.auth_token;
         const authHeader = req.headers.authorization;
+        const tokenFromHeader = authHeader ? authHeader.split(" ")[1] : null;
 
-        // Error si no existe el header
-        if (!authHeader) {
-            return res.status(401).json({
-                success: false,
-                message: "Token no proporcionado",
-            });
-        }
-        /* =========================================
-            FORMATO:
-            Bearer TOKEN
-        ========================================= */
-
-        //extraer el token quitando "Bearer"
-        const token = authHeader.split(" ")[1];
+        const token = tokenFromCookie || tokenFromHeader;
 
         // Error si no hay token válido
         if (!token) {
             return res.status(401).json({
                 success: false,
-                message: "Token inválido",
+                message: "Token no proporcionado",
             });
         }
 

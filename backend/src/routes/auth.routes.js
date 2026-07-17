@@ -31,7 +31,7 @@ router.post("/login",    authLimiter, loginValidation,    validate, loginControl
 
 // Rutas protegidas: requieren que el usuario esté autenticado previamente
 router.post("/logout",   authMiddleware, logoutController); // Ejecuta el middleware de sesión antes de cerrar
-router.get("/:id",        authMiddleware, getUserByIdController);  // Solo permite ver el perfil si el token es válido
+router.get("/me",        authMiddleware, getUserByIdController);  // Solo permite ver el perfil si el token es válido
 
 //Rutas protegidas para actualizar datos del usuario
 router.put("/update", authMiddleware, updateUserDateController);

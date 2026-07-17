@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import morgan from "morgan";
 import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
 
 import routes from "./routes/index.routes.js";
 
@@ -11,12 +12,28 @@ dotenv.config();
 
 const app = express();
 
+app.use(cookieParser());
+
 /* =========================
 Middlewares Globales
 ========================= */
+// En desarrollo probás desde localhost y desde la IP de la red local
+// (para probar en el celular u otra máquina). En producción, FRONTEND_URL
+// debería tener una sola URL fija.
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://192.168.56.1:3000'
+];
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
+  origin: function (origin, callback) {
+    // Permitir si el origen está en la lista o si es una petición de servidor a servidor (sin origen)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
+    }
+  },
   credentials: true
 }));
 
@@ -31,10 +48,10 @@ Ruta de prueba
 ========================= */
 
 app.get("/", (req, res) => {
-res.json({
-success: true,
-message: "API funcionando correctamente",
-});
+  res.json({
+    success: true,
+    message: "API funcionando correctamente",
+  });
 });
 
 /* =========================
@@ -48,7 +65,7 @@ HEALTH CHECK
 ============================== */
 
 app.get("/api/health", (_req, res) =>
-res.status(200).json({ ok: true })
+  res.status(200).json({ ok: true })
 );
 
 /* =========================
@@ -56,10 +73,10 @@ Manejo de errores 404
 ========================= */
 
 app.use((req, res) => {
-res.status(404).json({
-success: false,
-message: "Ruta no encontrada",
-});
+  res.status(404).json({
+    success: false,
+    message: "Ruta no encontrada",
+  });
 });
 
 /* ==============================

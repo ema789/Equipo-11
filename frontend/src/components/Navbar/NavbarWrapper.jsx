@@ -2,9 +2,8 @@
 
 import { usePathname } from "next/navigation";
 import { Navbar } from "./Navbar";
-
 // Estas son las rutas donde queremos que aparezca la barra
-const PROTECTED_ROUTES = ["/dashboard", "/clientes", "/items", "/presupuestos", "/perfil"];
+import { PROTECTED_ROUTES } from "@/lib/routes";
 
 export default function NavbarWrapper() {
   const pathname = usePathname();
