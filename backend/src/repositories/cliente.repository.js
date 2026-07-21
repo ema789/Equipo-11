@@ -11,6 +11,17 @@ export const findClientesByClienteRepository = async (usuarioId) => {
     return result.rows;
 };
 
+
+export const findClienteByIdRepository = async (usuarioId, clienteId) => {
+    const query = `
+        SELECT id, nombre, apellido, email, cuil_cuit, telefono, created_at
+        FROM clientes
+        WHERE id = $1 AND usuario_id = $2 AND deleted_at IS NULL;
+    `;
+    const result = await pool.query(query, [clienteId, usuarioId]);
+    return result.rows[0]; // Retorna el cliente o undefined si no existe
+};
+
 export const existsClienteRepository = async (usuario_id, clienteId) => {
     const query = `
         SELECT EXISTS (

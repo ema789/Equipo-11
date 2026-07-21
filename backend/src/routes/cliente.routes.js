@@ -2,6 +2,7 @@ import { Router } from "express";
 import { 
     createClienteController, 
     getClientesController,
+    getClienteByIdController,
     updateClienteController,
 } from "../controllers/cliente.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
@@ -14,6 +15,7 @@ router.use(authMiddleware);
 
 router.post("/", createClienteValidation, validate, createClienteController);
 router.get("/", getClientesController);
+router.get("/:id", getClienteByIdController);
 router.put("/update/:id",createClienteValidation, validate, updateClienteController);
 
 export default router;

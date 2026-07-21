@@ -16,56 +16,56 @@ export const loginSchema = z.object({
 
 
 export const registerSchema = z
-.object({
+  .object({
 
-  nombre: z
-    .string()
-    .min(1, "El nombre es obligatorio"),
-
-
-  apellido: z
-    .string()
-    .min(1, "El apellido es obligatorio"),
+    nombre: z
+      .string()
+      .min(1, "El nombre es obligatorio"),
 
 
-  nombreEmprendimiento: z
-    .string()
-    .min(1, "El nombre de la empresa es obligatorio"),
+    apellido: z
+      .string()
+      .min(1, "El apellido es obligatorio"),
 
 
-  email: z
-    .string()
-    .email("Debe ingresar un correo válido"),
+    nombreEmprendimiento: z
+      .string()
+      .min(1, "El nombre de la empresa es obligatorio"),
 
 
-  password: z
-    .string()
-    .min(8, "La contraseña debe tener al menos 8 caracteres")
-    .regex(/[A-Z]/, "Debe incluir una mayúscula")
-    .regex(/[a-z]/, "Debe incluir una minúscula")
-    .regex(/[0-9]/, "Debe incluir un número"),
+    email: z
+      .string()
+      .email("Debe ingresar un correo válido"),
 
 
-  repetirPassword: z
-    .string()
-    .min(1, "Debe repetir la contraseña"),
+    password: z
+      .string()
+      .min(8, "La contraseña debe tener al menos 8 caracteres")
+      .regex(/[A-Z]/, "Debe incluir una mayúscula")
+      .regex(/[a-z]/, "Debe incluir una minúscula")
+      .regex(/[0-9]/, "Debe incluir un número"),
 
 
-  terminos: z
-    .boolean()
-    .refine(
-      (value) => value === true,
-      "Debe aceptar los términos y condiciones"
-    ),
+    repetirPassword: z
+      .string()
+      .min(1, "Debe repetir la contraseña"),
 
-})
-.refine(
-  (data) => data.password === data.repetirPassword,
-  {
-    message: "Las contraseñas no coinciden",
-    path: ["repetirPassword"],
-  }
-);
+
+    terminos: z
+      .boolean()
+      .refine(
+        (value) => value === true,
+        "Debe aceptar los términos y condiciones"
+      ),
+
+  })
+  .refine(
+    (data) => data.password === data.repetirPassword,
+    {
+      message: "Las contraseñas no coinciden",
+      path: ["repetirPassword"],
+    }
+  );
 
 export const registerCompanySchema = z.object({
   razon_social: z
@@ -74,6 +74,7 @@ export const registerCompanySchema = z.object({
 
   cuil_cuit: z
     .string()
+    .regex(/^\d{11}$/)
     .min(1, "El CUIL/CUIT es obligatorio"),
 
   direccion: z
@@ -82,17 +83,18 @@ export const registerCompanySchema = z.object({
 
   telefono: z
     .string()
-    .min(8, "Debe ingresar un teléfono válido"), 
+    .regex(/^[0-9]+$/, "Sólo números")
+    .min(8, "Debe ingresar un teléfono válido"),
 
   rubro: z
     .string()
-    .min(1, "El rubro es obligatorio"), 
+    .min(1, "El rubro es obligatorio"),
 
   sitio_web: z
     .string()
-    .url("Debe ingresar una URL válida") 
+    .url("Debe ingresar una URL válida")
     .optional()
-    .or(z.literal("")), 
+    .or(z.literal("")),
 
   terminos: z
     .boolean()
@@ -101,3 +103,45 @@ export const registerCompanySchema = z.object({
       "Debe aceptar los términos y condiciones"
     ),
 });
+
+export const registerClienteSchema = z
+  .object({
+
+    nombre: z
+      .string()
+      .min(1, "El nombre es obligatorio"),
+
+
+    apellido: z
+      .string()
+      .min(1, "El apellido es obligatorio"),
+
+    telefono: z
+      .string()
+      .min(8, "Debe ingresar un teléfono válido")
+      .regex(/^[0-9]+$/, "Sólo números"),
+
+    email: z
+      .string()
+      .email("Debe ingresar un correo válido"),
+
+  })
+
+export const registerItemSchema = z
+  .object({
+
+    nombre: z
+      .string()
+      .min(1, "El nombre del item es obligatorio"),
+
+
+    precio: z
+      .number()
+      .positive("El precio debe ser mayor a 0"),
+
+    cantidad: z
+      .number()
+      .int("La cantidad debe ser un número entero")
+      .positive("La cantidad debe ser mayor a 0"),
+
+  })

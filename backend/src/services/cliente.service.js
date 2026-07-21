@@ -2,6 +2,7 @@ import {
     createClienteRepository, 
     findClientesByClienteRepository,
     updateClienteRepository,
+    findClienteByIdRepository,
     existsClienteRepository
 } from "../repositories/cliente.repository.js";
 
@@ -32,6 +33,14 @@ export const createClienteService = async (usuarioId, clienteData) => {
 
 export const getClientesByUsuarioService = async (usuarioId) => {
     return await findClientesByClienteRepository(usuarioId);
+};
+
+export const getClienteByIdService = async (usuarioId, clienteId) => {
+    const cliente = await findClienteByIdRepository(usuarioId, clienteId);
+    if (!cliente) {
+        throw new AppError("Cliente no encontrado", 404);
+    }
+    return cliente;
 };
 
 export const updateClienteService = async (usuario_id, updateData) => {
