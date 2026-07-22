@@ -1,42 +1,37 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import pool from './connection.js'; // Ajusta la ruta a tu archivo connection.js
-
-// Esto es necesario para obtener la ruta actual si usas "import" (ES Modules)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import pool from './connection.js';
 
 export const runMigration = async () => {
   try {
-   // Ruta a tu carpeta migrations (subiendo un nivel desde src)
-    const migrationsDir = path.join(__dirname, '../migrations');
+    console.log("Iniciando verificación y creación de tablas en la base de datos...");
 
-    // 1. Lee todos los archivos de la carpeta
-    const files = fs.readdirSync(migrationsDir); 
+    await pool.query(`
+      CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
-    // 2. Filtra solo los que terminan en .sql y ordénalos alfabéticamente
-    // (Por eso es útil nombrarlos con números: 01_usuarios.sql, 02_clientes.sql)
-    const sqlFiles = files
-      .filter(file => file.endsWith('.sql'))
-      .sort();
-    
-    console.log("No se encontraron archivos .sql para migrar.");
-      return;
-    
+      CREATE TABLE IF NOT EXISTS public.usuarios (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          nombre VARCHAR(100) NOT NULL,
+          apellido VARCHAR(100),
+          telefono VARCHAR(50),
+          razon_social VARCHAR(255),
+          nombre_emprendimiento VARCHAR(255) NOT NULL,
+          cargo VARCHAR(100),
+          cuil_cuit VARCHAR(100),
+          direccion VARCHAR(100),
+          rubro VARCHAR(100),
+          sitio_web VARCHAR(200),
+          email VARCHAR(255) NOT NULL UNIQUE,
+          activo BOOLEAN DEFAULT true,
+          password_hash TEXT NOT NULL,
+          logo_url TEXT,
+          logo_public_id TEXT,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW(),
+          deleted_at TIMESTAMP
+      );
+    `);
 
-    // 3. Itera y ejecuta cada archivo SQL de forma ordenada
-    for (const file of sqlFiles) {
-      const filePath = path.join(migrationsDir, file);
-      const sqlQuery = fs.readFileSync(filePath, 'utf8');
-
-      console.log(`Ejecutando migración: ${file}...`);
-      await pool.query(sqlQuery);
-    }
-
-    console.log("¡Todas las migraciones se ejecutaron exitosamente!");
+    console.log("¡La tabla 'usuarios' ha sido verificada o creada exitosamente!");
   } catch (error) {
-    console.error("Error al ejecutar las migraciones SQL:", error);
+    console.error("Error crítico al ejecutar la migración:", error);
   }
-
 };
