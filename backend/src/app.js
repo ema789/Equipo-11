@@ -7,10 +7,13 @@ import cookieParser from "cookie-parser";
 import routes from "./routes/index.routes.js";
 
 import { errorHandler } from "./middlewares/error.middleware.js";
+import { runMigration } from './database/migrate.js';
 
 dotenv.config();
 
 const app = express();
+
+await runMigration();
 
 app.use(cookieParser());
 
