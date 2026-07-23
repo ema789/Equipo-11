@@ -15,7 +15,7 @@ const api = axios.create({
     'Content-Type': 'application/json'
   }
 });
-
+/*
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -23,7 +23,7 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
-
+*/
 /**
  * Interceptor de respuesta: manejo global de errores HTTP.
  * Si la API responde 401 (no autenticado), redirigir al login.
