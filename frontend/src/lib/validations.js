@@ -27,11 +27,9 @@ export const registerSchema = z
       .string()
       .min(1, "El apellido es obligatorio"),
 
-
     nombreEmprendimiento: z
       .string()
       .min(1, "El nombre de la empresa es obligatorio"),
-
 
     email: z
       .string()
