@@ -33,8 +33,9 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Permitir si el origen está en la lista o si es una petición de servidor a servidor (sin origen)
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Permitir peticiones sin origen (como Postman o Server-to-Server) 
+    // o si el origen está en la lista o termina en .vercel.app
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
       callback(null, true);
     } else {
       callback(new Error('No permitido por CORS'));
